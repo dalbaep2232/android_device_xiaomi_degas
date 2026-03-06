@@ -39,7 +39,7 @@ $(call inherit-product, vendor/twrp/config/common.mk)
 
 # API
 PRODUCT_SHIPPING_API_LEVEL := 34
-PRODUCT_TARGET_VNDK_VERSION := 36
+PRODUCT_TARGET_VNDK_VERSION := 34
 
 # Enable Fuse Passthrough
 PRODUCT_PROPERTY_OVERRIDES += persist.sys.fuse.passthrough.enable=true
