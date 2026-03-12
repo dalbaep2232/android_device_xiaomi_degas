@@ -1,5 +1,6 @@
-service tee-supplicant /vendor/bin/tee-supplicant
+service mitee-helper /system/bin/mitee_helper
 	class none
 	user root
 	group root
+	oneshot
 	seclabel u:r:recovery:s0

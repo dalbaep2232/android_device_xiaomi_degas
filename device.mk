@@ -127,11 +127,16 @@ PRODUCT_PACKAGES += \
     android.hardware.health@2.1-impl \
     android.hardware.health@2.1-service
 
-# Keymaster
+# Crypto / KeyMint
 PRODUCT_PACKAGES += \
-    android.hardware.keymaster@4.1 \
-    android.hardware.keymaster@4.0 \
-    android.hardware.keymaster@3.0
+    android.hardware.security.keymint-V3-ndk \
+    android.hardware.security.keymint-V3-ndk.recovery \
+    android.hardware.gatekeeper-V1-ndk \
+    android.hardware.gatekeeper-V1-ndk.recovery \
+    android.hardware.security.secureclock-V1-ndk \
+    android.hardware.security.secureclock-V1-ndk.recovery \
+    android.hardware.security.sharedsecret-V1-ndk \
+    android.hardware.security.sharedsecret-V1-ndk.recovery
 
 # Mtk plpath utils
 PRODUCT_PACKAGES += \
