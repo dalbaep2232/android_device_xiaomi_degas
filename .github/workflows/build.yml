@@ -12,12 +12,10 @@ jobs:
 
       - name: Cleanup & Install Dependencies
         run: |
-          # Очищення місця (безпечне)
           IMAGES=$(docker images -q)
           if [ -n "$IMAGES" ]; then docker rmi $IMAGES || true; fi
           sudo rm -rf /usr/share/dotnet /etc/mysql /usr/local/lib/android /opt/ghc || true
           
-          # Повний набір пакетів для Android 14
           sudo apt update
           sudo apt install -y gperf gcc-multilib gcc-10-multilib g++-multilib g++-10-multilib \
           libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev \
@@ -38,24 +36,21 @@ jobs:
           cd twrp
           git config --global user.email "artem@example.com"
           git config --global user.name "Artem"
-          # Використовуємо маніфест 14.1 для нових девайсів
           repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-14.1
           repo sync -c -j$(nproc) --no-clone-bundle --no-tags
 
       - name: Clone Device Tree
         run: |
           cd twrp
-          # Клонуємо твоє дерево прямо в папку пристрою
           git clone ${{ github.server_url }}/${{ github.repository }} device/xiaomi/degas
 
       - name: Build Vendor Boot
         run: |
           cd twrp
-          . build/envsetup.sh
-          # Обираємо конфіг для degas
-          lunch twrp_degas-trunk_staging-eng || lunch twrp_degas-eng
-          # Збираємо саме VENDOR_BOOT
           export ALLOW_MISSING_DEPENDENCIES=true
+          . build/envsetup.sh
+          # Змінюємо trunk_staging на ap2a
+          lunch twrp_degas-ap2a-eng || lunch twrp_degas-eng
           mka vendorbootimage -j$(nproc)
 
       - name: Upload Vendor Boot Artifact
