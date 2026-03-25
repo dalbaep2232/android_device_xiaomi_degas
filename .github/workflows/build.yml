@@ -1,0 +1,53 @@
+name: Build TWRP for Degas
+
+on:
+  workflow_dispatch: # Позволяет запускать сборку кнопкой
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cleanup & Build Environment
+        run: |
+          sudo apt update
+          sudo apt install gperf gcc-multilib gcc-10-multilib g++-multilib g++-10-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig python3 python-is-python3
+          docker rmi $(docker images -q)
+          sudo rm -rf /usr/share/dotnet /etc/mysql /usr/local/lib/android
+
+      - name: Install Repo
+        run: |
+          mkdir ~/bin
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
+          chmod a+x ~/bin/repo
+          sudo ln -sf ~/bin/repo /usr/bin/repo
+
+      - name: Initialize & Sync
+        run: |
+          mkdir twrp
+          cd twrp
+          git config --global user.email "prosto01tv@gmail.com"
+          git config --global user.name "Jaba"
+          repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-14.1
+          repo sync -c -j$(nproc) --no-clone-bundle --no-tags
+
+      - name: Clone Device Tree
+        run: |
+          cd twrp
+          git clone https://github.com/nicodotgit/android_device_xiaomi_degas device/xiaomi/degas
+
+      - name: Build Recovery
+        run: |
+          cd twrp
+          . build/envsetup.sh
+          # Используем lunch через выбор продукта
+          lunch twrp_degas-trunk_staging-eng || lunch twrp_degas-eng
+          mka recoveryimage -j$(nproc)
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TWRP-Degas-Image
+          path: twrp/out/target/product/degas/recovery.img
