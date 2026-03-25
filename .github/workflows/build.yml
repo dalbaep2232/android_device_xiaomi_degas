@@ -1,7 +1,7 @@
-name: Build TWRP for Degas
+name: Build TWRP for Degas (Vendor Boot)
 
 on:
-  workflow_dispatch: # Позволяет запускать сборку кнопкой
+  workflow_dispatch:
 
 jobs:
   build:
@@ -10,44 +10,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cleanup & Build Environment
+      - name: Cleanup & Install Dependencies
         run: |
+          # Очищення місця (безпечне)
+          IMAGES=$(docker images -q)
+          if [ -n "$IMAGES" ]; then docker rmi $IMAGES || true; fi
+          sudo rm -rf /usr/share/dotnet /etc/mysql /usr/local/lib/android /opt/ghc || true
+          
+          # Повний набір пакетів для Android 14
           sudo apt update
-          sudo apt install gperf gcc-multilib gcc-10-multilib g++-multilib g++-10-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig python3 python-is-python3
-          docker rmi $(docker images -q)
-          sudo rm -rf /usr/share/dotnet /etc/mysql /usr/local/lib/android
+          sudo apt install -y gperf gcc-multilib gcc-10-multilib g++-multilib g++-10-multilib \
+          libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z1-dev \
+          libgl1-mesa-dev libxml2-utils xsltproc unzip fontconfig python3 python-is-python3 \
+          bc bison build-essential curl flex git gnupg gperf lib32readline-dev liblz4-tool \
+          libncurses5-dev libsdl1.2-dev libssl-dev lzop pngcrush rsync schedtool squashfs-tools zip zlib1g-dev
 
       - name: Install Repo
         run: |
-          mkdir ~/bin
+          mkdir -p ~/bin
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/bin/repo
           chmod a+x ~/bin/repo
           sudo ln -sf ~/bin/repo /usr/bin/repo
 
-      - name: Initialize & Sync
+      - name: Initialize & Sync TWRP
         run: |
           mkdir twrp
           cd twrp
-          git config --global user.email "prosto01tv@gmail.com"
-          git config --global user.name "Jaba"
+          git config --global user.email "artem@example.com"
+          git config --global user.name "Artem"
+          # Використовуємо маніфест 14.1 для нових девайсів
           repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-14.1
           repo sync -c -j$(nproc) --no-clone-bundle --no-tags
 
       - name: Clone Device Tree
         run: |
           cd twrp
-          git clone https://github.com/nicodotgit/android_device_xiaomi_degas device/xiaomi/degas
+          # Клонуємо твоє дерево прямо в папку пристрою
+          git clone ${{ github.server_url }}/${{ github.repository }} device/xiaomi/degas
 
-      - name: Build Recovery
+      - name: Build Vendor Boot
         run: |
           cd twrp
           . build/envsetup.sh
-          # Используем lunch через выбор продукта
+          # Обираємо конфіг для degas
           lunch twrp_degas-trunk_staging-eng || lunch twrp_degas-eng
-          mka recoveryimage -j$(nproc)
+          # Збираємо саме VENDOR_BOOT
+          export ALLOW_MISSING_DEPENDENCIES=true
+          mka vendorbootimage -j$(nproc)
 
-      - name: Upload Artifact
+      - name: Upload Vendor Boot Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: TWRP-Degas-Image
-          path: twrp/out/target/product/degas/recovery.img
+          name: TWRP-Degas-VendorBoot
+          path: twrp/out/target/product/degas/vendor_boot.img
